@@ -14,7 +14,7 @@ begin
     // Add args
     Parser.AddArgument('filename', '', '', 'The name of the file to process', True);
     Parser.AddArgument('count', '-c', '--count', 'Number of repetitions', False, TArgAction.Store, TArgType.AsInteger, '1');
-    Parser.AddArgument('mode', '-m', '--mode', 'Operating mode (fast|safe)', False, TArgAction.Store, TArgType.AsString, 'safe', ['fast', 'safe']);
+    Parser.AddArgument('mode', '-m', '--mode', 'Operating mode', False, TArgAction.Store, TArgType.AsString, 'safe', ['fast', 'safe']);
     Parser.AddArgument('verbose', '-v', '--verbose', 'Detailed output', False, TArgAction.Flag, TArgType.AsBoolean);
 
     // Parse param args

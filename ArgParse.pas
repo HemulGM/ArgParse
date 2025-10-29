@@ -388,7 +388,10 @@ begin
     end;
     if Flags = '' then
       Flags := Arg.Name;
-    Writeln(Format('  %-20s %s', [Flags, Arg.Help]));
+    var Help := Arg.Help;
+    if Length(Arg.Choices) > 0 then
+      Help := Help + ' (' + string.Join('|', Arg.Choices) + ')';
+    Writeln(Format('  %-20s %s', [Flags, Help]));
   end;
 end;
 
