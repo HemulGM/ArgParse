@@ -7,7 +7,7 @@ uses
   ArgParse in '..\ArgParse.pas';
 
 begin
-  var Parser := TArgumentParser.Create('ArgParseExample.exe');
+  var Parser: IArgumentParser := TArgumentParser.Create('ArgParseExample.exe');
   try
     Parser.SetDescription('An example of using argparse for Delphi.');
 
@@ -46,6 +46,5 @@ begin
       readln;
     end;
   end;
-  Parser.Free;
 end.
 

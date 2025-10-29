@@ -50,7 +50,61 @@ type
     function GetAll(const AName: string): TArray<string>;
   end;
 
-  TArgumentParser = class
+  IArgumentParser = interface
+    ['{641E3306-0498-49D3-B835-6458FE69412D}']
+    function GetParamArgs: TNamespace;
+    /// <summary>
+    /// Adds a description of the use of the program
+    /// </summary>
+    procedure SetDescription(const ADesc: string);
+    /// <summary>
+    /// Adds a new command-line argument to the parser.
+    /// </summary>
+    /// <param name="AName">
+    /// The logical name of the argument, which is then used to retrieve the value through Namespace (for example, 'filename')
+    /// </param>
+    /// <param name="AShort">
+    /// A short flag that starts with '-', such as '-v'. It can be empty.
+    /// </param>
+    /// <param name="ALong">
+    /// A long flag that starts with '--', such as '--verbose'. It can be empty.
+    /// </param>
+    /// <param name="AHelp">
+    /// The help text displayed in the PrintHelp method.
+    /// </param>
+    /// <param name="ARequired">
+    /// The requiredness of the argument. If True and the argument is not specified, it will cause an error.
+    /// </param>
+    /// <param name="AAction">
+    /// Defines the behavior when a flag:
+    /// Store - expects a value after the flag (for example, --count 5).
+    /// Flag — a boolean flag that is set to True if present (for example, --verbose).
+    /// </param>
+    /// <param name="AArgType">
+    /// The type of the value: AsString, AsInteger, AsBoolean. It is used when reading the value.
+    /// </param>
+    /// <param name="ADefault">
+    /// The default value if the argument is not specified.
+    /// </param>
+    /// <param name="AChoices">
+    /// An array of valid values. If specified, the input is checked for matching one of the elements.
+    /// </param>
+    function AddArgument(const AName: string; const AShort: string = ''; const ALong: string = ''; const AHelp: string = ''; const ARequired: Boolean = False; const AAction: TArgAction = TArgAction.Store; const AArgType: TArgType = TArgType.AsString; const ADefault: string = ''; const AChoices: TArray<string> = []): TArgument;
+    /// <summary>
+    /// Parsing the parameter list. Returns a separate object
+    /// </summary>
+    function ParseArgs(const ARawArgs: TArray<string>): TNamespace;
+    /// <summary>
+    /// Gives access to the program run parameters (ParamStr/ParamCount)
+    /// </summary>
+    property ParamArgs: TNamespace read GetParamArgs;
+    /// <summary>
+    /// Displays help on startup parameters
+    /// </summary>
+    procedure PrintHelp(AReadLn: Boolean = False);
+  end;
+
+  TArgumentParser = class(TInterfacedObject, IArgumentParser)
   private
     FProgName: string;
     FDescription: string;
