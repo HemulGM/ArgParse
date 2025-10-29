@@ -12,10 +12,11 @@ begin
     Parser.SetDescription('An example of using argparse for Delphi.');
 
     // Add args
-    Parser.AddArgument('filename', '', '', 'The name of the file to process', True);
+    Parser.AddArgument('filename', '', '', 'The name of the file to process', True, TArgAction.Store, TArgType.AsString, '', [], ['output']);
     Parser.AddArgument('count', '-c', '--count', 'Number of repetitions', False, TArgAction.Store, TArgType.AsInteger, '1');
     Parser.AddArgument('mode', '-m', '--mode', 'Operating mode', False, TArgAction.Store, TArgType.AsString, 'safe', ['fast', 'safe']);
     Parser.AddArgument('verbose', '-v', '--verbose', 'Detailed output', False, TArgAction.Flag, TArgType.AsBoolean);
+    Parser.AddArgument('output', '-o', '--output', 'Output path', False, TArgAction.Store, TArgType.AsString, '', [], []);
 
     // Parse param args
     var Args := Parser.ParamArgs;
@@ -46,5 +47,6 @@ begin
       readln;
     end;
   end;
+  readln;
 end.
 

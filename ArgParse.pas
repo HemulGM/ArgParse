@@ -33,10 +33,20 @@ type
     ArgType: TArgType;
     DefaultValue: string;
     Choices: TArray<string>;
+    Requirements: TArray<string>; // requirements args
     constructor Create(const AName: string);
   end;
 
-  TNamespace = class
+  INamespace = interface
+    ['{6A3AF304-E7E0-4230-8D0F-C2BFBB63E88D}']
+    function Has(const AName: string): Boolean;
+    procedure SetValue(const AName: string; const AValues: string);
+    function GetAsString(const AName: string; const ADefault: string = ''): string;
+    function GetAsInteger(const AName: string; ADefault: Integer = 0): Integer;
+    function GetAsBoolean(const AName: string; ADefault: Boolean = False): Boolean;
+  end;
+
+  TNamespace = class(TInterfacedObject, INamespace)
   private
     FValues: TDictionary<string, string>;
   public
@@ -51,7 +61,7 @@ type
 
   IArgumentParser = interface
     ['{641E3306-0498-49D3-B835-6458FE69412D}']
-    function GetParamArgs: TNamespace;
+    function GetParamArgs: INamespace;
     /// <summary>
     /// Adds a description of the use of the program
     /// </summary>
@@ -88,19 +98,23 @@ type
     /// <param name="AChoices">
     /// An array of valid values. If specified, the input is checked for matching one of the elements.
     /// </param>
-    function AddArgument(const AName: string; const AShort: string = ''; const ALong: string = ''; const AHelp: string = ''; const ARequired: Boolean = False; const AAction: TArgAction = TArgAction.Store; const AArgType: TArgType = TArgType.AsString; const ADefault: string = ''; const AChoices: TArray<string> = []): TArgument;
+    function AddArgument(const AName: string; const AShort: string = ''; const ALong: string = ''; const AHelp: string = ''; const ARequired: Boolean = False; const AAction: TArgAction = TArgAction.Store; const AArgType: TArgType = TArgType.AsString; const ADefault: string = ''; const AChoices: TArray<string> = []; const ARequirements: TArray<string> = []): TArgument;
     /// <summary>
     /// Parsing the parameter list. Returns a separate object
     /// </summary>
-    function ParseArgs(const ARawArgs: TArray<string>): TNamespace;
+    function ParseArgs(const ARawArgs: TArray<string>): INamespace;
     /// <summary>
     /// Gives access to the program run parameters (ParamStr/ParamCount)
     /// </summary>
-    property ParamArgs: TNamespace read GetParamArgs;
+    property ParamArgs: INamespace read GetParamArgs;
     /// <summary>
     /// Displays help on startup parameters
     /// </summary>
     procedure PrintHelp(AReadLn: Boolean = False);
+    /// <summary>
+    /// Get string help on startup parameters
+    /// </summary>
+    function GetHelp: string;
   end;
 
   TArgumentParser = class(TInterfacedObject, IArgumentParser)
@@ -108,11 +122,11 @@ type
     FProgName: string;
     FDescription: string;
     FArgs: TObjectList<TArgument>;
-    FParamArgs: TNamespace;
+    FParamArgs: INamespace;
     procedure RaiseError(const Msg: string);
     function FindByFlag(const AFlag: string): TArgument;
     function IsFlag(const S: string): Boolean;
-    function GetParamArgs: TNamespace;
+    function GetParamArgs: INamespace;
   public
     /// <param name="AProgName">
     /// The name of the executive file for reference
@@ -155,19 +169,23 @@ type
     /// <param name="AChoices">
     /// An array of valid values. If specified, the input is checked for matching one of the elements.
     /// </param>
-    function AddArgument(const AName: string; const AShort: string = ''; const ALong: string = ''; const AHelp: string = ''; const ARequired: Boolean = False; const AAction: TArgAction = TArgAction.Store; const AArgType: TArgType = TArgType.AsString; const ADefault: string = ''; const AChoices: TArray<string> = []): TArgument;
+    function AddArgument(const AName: string; const AShort: string = ''; const ALong: string = ''; const AHelp: string = ''; const ARequired: Boolean = False; const AAction: TArgAction = TArgAction.Store; const AArgType: TArgType = TArgType.AsString; const ADefault: string = ''; const AChoices: TArray<string> = []; const ARequirements: TArray<string> = []): TArgument;
     /// <summary>
     /// Parsing the parameter list. Returns a separate object
     /// </summary>
-    function ParseArgs(const ARawArgs: TArray<string>): TNamespace;
+    function ParseArgs(const ARawArgs: TArray<string>): INamespace;
     /// <summary>
     /// Gives access to the program run parameters (ParamStr/ParamCount)
     /// </summary>
-    property ParamArgs: TNamespace read GetParamArgs;
+    property ParamArgs: INamespace read GetParamArgs;
     /// <summary>
     /// Displays help on startup parameters
     /// </summary>
     procedure PrintHelp(AReadLn: Boolean = False);
+    /// <summary>
+    /// Get string help on startup parameters
+    /// </summary>
+    function GetHelp: string;
   end;
 
 implementation
@@ -186,6 +204,7 @@ begin
   ArgType := TArgType.AsString;
   DefaultValue := '';
   Choices := [];
+  Requirements := [];
 end;
 
 { TNamespace }
@@ -261,13 +280,13 @@ end;
 destructor TArgumentParser.Destroy;
 begin
   FArgs.Free;
-  FParamArgs.Free;
+  FParamArgs := nil;
   inherited;
 end;
 
 procedure TArgumentParser.RaiseError(const Msg: string);
 begin
-  raise EArgumentParserError.Create('ArgumentParser error: ' + Msg);
+  raise EArgumentParserError.CreateFmt('Argument parser error: %s', [Msg]);
 end;
 
 procedure TArgumentParser.SetDescription(const ADesc: string);
@@ -275,7 +294,7 @@ begin
   FDescription := ADesc;
 end;
 
-function TArgumentParser.AddArgument(const AName: string; const AShort: string; const ALong: string; const AHelp: string; const ARequired: Boolean; const AAction: TArgAction; const AArgType: TArgType; const ADefault: string; const AChoices: TArray<string>): TArgument;
+function TArgumentParser.AddArgument(const AName: string; const AShort: string; const ALong: string; const AHelp: string; const ARequired: Boolean; const AAction: TArgAction; const AArgType: TArgType; const ADefault: string; const AChoices: TArray<string>; const ARequirements: TArray<string>): TArgument;
 begin
   Result := TArgument.Create(AName);
   FArgs.Add(Result);
@@ -287,6 +306,7 @@ begin
   Result.ArgType := AArgType;
   Result.DefaultValue := ADefault;
   Result.Choices := Copy(AChoices);
+  Result.Requirements := ARequirements;
 end;
 
 function TArgumentParser.IsFlag(const S: string): Boolean;
@@ -306,7 +326,7 @@ begin
   Result := nil;
 end;
 
-function TArgumentParser.ParseArgs(const ARawArgs: TArray<string>): TNamespace;
+function TArgumentParser.ParseArgs(const ARawArgs: TArray<string>): INamespace;
 begin
   Result := TNamespace.Create;
   try
@@ -322,7 +342,7 @@ begin
       begin
         var Arg := FindByFlag(Token);
         if Arg = nil then
-          RaiseError('Unknown option: ' + Token);
+          RaiseError(Format('Unknown option: "%s"', [Token]));
 
         if Arg.Action = TArgAction.Flag then
         begin
@@ -331,13 +351,13 @@ begin
           Continue;
         end;
 
-        // store value(s)
+        // Store value(s)
         if i + 1 >= Length(ARawArgs) then
-          RaiseError('Option ' + Token + ' requires a value');
+          RaiseError(Format('Option "%s" requires a value', [Token]));
 
         var ArgValue := ARawArgs[i + 1];
 
-        // validate choices
+        // Validate choices
         if Length(Arg.Choices) > 0 then
         begin
           var Found := False;
@@ -348,10 +368,10 @@ begin
               Break;
             end;
           if not Found then
-            RaiseError(Format('Value for %s not in choices: %s', [Token, string.Join('|', Arg.Choices)]));
+            RaiseError(Format('Value for "%s" not in choices: "%s"', [Token, string.Join('|', Arg.Choices)]));
         end;
 
-        // validate type
+        // Validate type
         case Arg.ArgType of
           TArgType.AsInteger:
             try
@@ -362,7 +382,7 @@ begin
           TArgType.AsBoolean:
             begin
               if not TArray.Contains<string>(['true', 'false', '1', '0'], ArgValue.ToLower) then
-                RaiseError(Format('Value for %s must be Boolean', [Token]));
+                RaiseError(Format('Value for "%s" must be Boolean (true|false|1|0)', [Token]));
             end;
         end;
 
@@ -372,10 +392,10 @@ begin
       end
       else
       begin
-        // positional arguments: match against first argument with no flags
+        // Positional arguments: match against first argument with no flags
         var Found := False;
         for var Arg in FArgs do
-          if (Arg.ShortName = '') and (Arg.LongName = '') then
+          if Arg.ShortName.IsEmpty and Arg.LongName.IsEmpty then
             if not Result.Has(Arg.Name) then
             begin
               Result.SetValue(Arg.Name, Token);
@@ -383,27 +403,68 @@ begin
               Break;
             end;
         if not Found then
-          RaiseError('Unexpected positional argument: ' + Token);
+          RaiseError(Format('Unexpected positional argument: "%s"', [Token]));
         Inc(i);
       end;
     end;
 
-    // check required
+    // Check required
     for var Arg in FArgs do
       if Arg.Required and not Result.Has(Arg.Name) then
-        RaiseError('Argument required: ' + Arg.Name);
+        RaiseError(Format('Argument required: "%s"', [Arg.Name]));
 
-    // For flags with action store_true that were not set, put false
+    // For flags with action Flag that were not set, put false
     for var Arg in FArgs do
       if (Arg.Action = TArgAction.Flag) and not Result.Has(Arg.Name) then
         Result.SetValue(Arg.Name, '0');
+
+    // Check requirements
+    for var Arg in FArgs do
+      for var Req in Arg.Requirements do
+        if not Result.Has(Req) then
+          RaiseError(Format('Using argument "%s" requires the presence of argument "%s".', [Arg.Name, Req]));
   except
-    Result.Free;
+    Result := nil;
     raise;
   end;
 end;
 
-function TArgumentParser.GetParamArgs: TNamespace;
+function TArgumentParser.GetHelp: string;
+begin
+  var Builder := TStringBuilder.Create;
+  try
+    Builder.AppendFormat('Usage: %s [options]', [FProgName]);
+    Builder.AppendLine;
+    if FDescription <> '' then
+      Builder.AppendLine(FDescription);
+    Builder.AppendLine;
+    Builder.AppendLine('Options:');
+    for var Arg in FArgs do
+    begin
+      var Flags := '';
+      if Arg.ShortName <> '' then
+        Flags := Flags + Arg.ShortName;
+      if Arg.LongName <> '' then
+      begin
+        if Flags <> '' then
+          Flags := Flags + ', ';
+        Flags := Flags + Arg.LongName;
+      end;
+      if Flags = '' then
+        Flags := Arg.Name;
+      var Help := Arg.Help;
+      if Length(Arg.Choices) > 0 then
+        Help := Help + ' (' + string.Join('|', Arg.Choices) + ')';
+      Builder.AppendFormat('  %-20s %s', [Flags, Help]);
+      Builder.AppendLine;
+    end;
+    Result := Builder.ToString;
+  finally
+    Builder.Free;
+  end;
+end;
+
+function TArgumentParser.GetParamArgs: INamespace;
 begin
   if not Assigned(FParamArgs) then
   begin
@@ -417,29 +478,7 @@ end;
 
 procedure TArgumentParser.PrintHelp(AReadLn: Boolean = False);
 begin
-  Writeln('Usage: ', FProgName, ' [options]');
-  if FDescription <> '' then
-    Writeln(FDescription);
-  Writeln;
-  Writeln('Options:');
-  for var Arg in FArgs do
-  begin
-    var Flags := '';
-    if Arg.ShortName <> '' then
-      Flags := Flags + Arg.ShortName;
-    if Arg.LongName <> '' then
-    begin
-      if Flags <> '' then
-        Flags := Flags + ', ';
-      Flags := Flags + Arg.LongName;
-    end;
-    if Flags = '' then
-      Flags := Arg.Name;
-    var Help := Arg.Help;
-    if Length(Arg.Choices) > 0 then
-      Help := Help + ' (' + string.Join('|', Arg.Choices) + ')';
-    Writeln(Format('  %-20s %s', [Flags, Help]));
-  end;
+  Writeln(GetHelp);
   if AReadLn then
     Readln;
 end;
