@@ -1,6 +1,17 @@
 # ArgParse
 Delphi argparse
 
+![GitHub](https://img.shields.io/badge/IDE%20Version-Delphi%2010.3+-yellow)
+
+- Working with unnamed arguments.
+- Specifying a short and a long parameter.
+- Requiring a parameter to be specified.
+- Flag parameters.
+- Checking parameter types (number, floating-point number, boolean).
+- Specifying available values.
+- The ability to specify dependent arguments.
+
+Example
 ```pascal
 program ArgParseExample;
 
@@ -58,7 +69,6 @@ end.
 ```
 
 Output
-
 ```
 ArgumentParser error: Argument required: filename
 Usage: example [options]
