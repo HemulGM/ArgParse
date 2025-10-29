@@ -18,7 +18,7 @@ type
   /// </summary>
   Flag);
 
-  TArgType = (AsString, AsInteger, AsBoolean);
+  TArgType = (AsString, AsInteger, AsFloat, AsBoolean);
 
   EArgumentParserError = class(Exception);
 
@@ -42,7 +42,8 @@ type
     function Has(const AName: string): Boolean;
     procedure SetValue(const AName: string; const AValues: string);
     function GetAsString(const AName: string; const ADefault: string = ''): string;
-    function GetAsInteger(const AName: string; ADefault: Integer = 0): Integer;
+    function GetAsInteger(const AName: string; ADefault: Int64 = 0): Int64;
+    function GetAsFloat(const AName: string; ADefault: Extended = 0.0): Extended;
     function GetAsBoolean(const AName: string; ADefault: Boolean = False): Boolean;
   end;
 
@@ -55,7 +56,8 @@ type
     function Has(const AName: string): Boolean;
     procedure SetValue(const AName: string; const AValues: string);
     function GetAsString(const AName: string; const ADefault: string = ''): string;
-    function GetAsInteger(const AName: string; ADefault: Integer = 0): Integer;
+    function GetAsInteger(const AName: string; ADefault: Int64 = 0): Int64;
+    function GetAsFloat(const AName: string; ADefault: Extended = 0.0): Extended;
     function GetAsBoolean(const AName: string; ADefault: Boolean = False): Boolean;
   end;
 
@@ -244,12 +246,25 @@ begin
     Result := ADefault;
 end;
 
-function TNamespace.GetAsInteger(const AName: string; ADefault: Integer): Integer;
+function TNamespace.GetAsFloat(const AName: string; ADefault: Extended): Extended;
 begin
   var Value: string;
   if FValues.TryGetValue(AName, Value) and (Length(Value) > 0) then
   try
-    Result := Value.ToInteger;
+    Result := Value.Replace('.', FormatSettings.DecimalSeparator).Replace(',', FormatSettings.DecimalSeparator).ToExtended;
+  except
+    Result := ADefault;
+  end
+  else
+    Result := ADefault;
+end;
+
+function TNamespace.GetAsInteger(const AName: string; ADefault: Int64): Int64;
+begin
+  var Value: string;
+  if FValues.TryGetValue(AName, Value) and (Length(Value) > 0) then
+  try
+    Result := Value.ToInt64;
   except
     Result := ADefault;
   end
@@ -346,7 +361,7 @@ begin
 
         if Arg.Action = TArgAction.Flag then
         begin
-          Result.SetValue(Arg.Name, ''); // presence -> true
+          Result.SetValue(Arg.Name, '1'); // presence -> true
           Inc(i);
           Continue;
         end;
@@ -378,6 +393,12 @@ begin
               ArgValue.ToInt64;
             except
               RaiseError(Format('Value for %s must be Integer', [Token]));
+            end;
+          TArgType.AsFloat:
+            try
+              ArgValue.Replace('.', FormatSettings.DecimalSeparator).Replace(',', FormatSettings.DecimalSeparator).ToExtended;
+            except
+              RaiseError(Format('Value for %s must be Float', [Token]));
             end;
           TArgType.AsBoolean:
             begin

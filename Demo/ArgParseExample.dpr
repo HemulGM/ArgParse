@@ -17,6 +17,7 @@ begin
     Parser.AddArgument('mode', '-m', '--mode', 'Operating mode', False, TArgAction.Store, TArgType.AsString, 'safe', ['fast', 'safe']);
     Parser.AddArgument('verbose', '-v', '--verbose', 'Detailed output', False, TArgAction.Flag, TArgType.AsBoolean);
     Parser.AddArgument('output', '-o', '--output', 'Output path', False, TArgAction.Store, TArgType.AsString, '', [], []);
+    Parser.AddArgument('size', '-s', '--size', 'Scale', False, TArgAction.Store, TArgType.AsFloat, '1');
 
     // Parse param args
     var Args := Parser.ParamArgs;
@@ -25,10 +26,11 @@ begin
     var count := Args.GetAsInteger('count');
     var verbose := Args.GetAsBoolean('verbose');
     var mode := Args.GetAsString('mode');
+    var size := Args.GetAsFloat('size');
 
     // Using example
     if verbose then
-      Writeln('File: ', filename, ', Repeats: ', count, ', Mode: ', mode);
+      Writeln('File: ', filename, ', Repeats: ', count, ', Mode: ', mode, ', Size: ', size);
 
     for var i := 1 to count do
       Writeln(Format('Processing %d/%d file %s in mode %s...', [i, count, filename, mode]));
