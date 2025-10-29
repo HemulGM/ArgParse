@@ -36,10 +36,9 @@ begin
     begin
       Writeln(E.Message);
       // Print help
-      Parser.PrintHelp;
+      Parser.PrintHelp(True);
     end;
   end;
   Parser.Free;
-  readln;
 end.
 
