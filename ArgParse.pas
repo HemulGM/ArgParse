@@ -38,16 +38,15 @@ type
 
   TNamespace = class
   private
-    FValues: TDictionary<string, TArray<string>>;
+    FValues: TDictionary<string, string>;
   public
     constructor Create;
     destructor Destroy; override;
-    procedure SetValue(const AName: string; const AValues: TArray<string>);
     function Has(const AName: string): Boolean;
+    procedure SetValue(const AName: string; const AValues: string);
     function GetAsString(const AName: string; const ADefault: string = ''): string;
     function GetAsInteger(const AName: string; ADefault: Integer = 0): Integer;
     function GetAsBoolean(const AName: string; ADefault: Boolean = False): Boolean;
-    function GetAll(const AName: string): TArray<string>;
   end;
 
   IArgumentParser = interface
@@ -194,7 +193,7 @@ end;
 constructor TNamespace.Create;
 begin
   inherited Create;
-  FValues := TDictionary<string, TArray<string>>.Create;
+  FValues := TDictionary<string, string>.Create;
 end;
 
 destructor TNamespace.Destroy;
@@ -203,30 +202,24 @@ begin
   inherited;
 end;
 
-procedure TNamespace.SetValue(const AName: string; const AValues: TArray<string>);
+procedure TNamespace.SetValue(const AName: string; const AValues: string);
 begin
   FValues.AddOrSetValue(AName, AValues);
 end;
 
 function TNamespace.Has(const AName: string): Boolean;
 begin
-  Result := FValues.ContainsKey(AName);
-end;
-
-function TNamespace.GetAll(const AName: string): TArray<string>;
-begin
-  if not FValues.TryGetValue(AName, Result) then
-    Result := [];
+  Result := FValues.ContainsKey(AName) and not FValues[AName].IsEmpty;
 end;
 
 function TNamespace.GetAsBoolean(const AName: string; ADefault: Boolean): Boolean;
 begin
-  var Value: TArray<string>;
+  var Value: string;
   if FValues.TryGetValue(AName, Value) then
   begin
     if Length(Value) = 0 then
       Exit(True);
-    Result := (Value[0] <> '0') and (Value[0].ToLower <> 'false');
+    Result := (Value <> '0') and (Value.ToLower <> 'false');
   end
   else
     Result := ADefault;
@@ -234,10 +227,10 @@ end;
 
 function TNamespace.GetAsInteger(const AName: string; ADefault: Integer): Integer;
 begin
-  var Value: TArray<string>;
+  var Value: string;
   if FValues.TryGetValue(AName, Value) and (Length(Value) > 0) then
   try
-    Result := Value[0].ToInteger;
+    Result := Value.ToInteger;
   except
     Result := ADefault;
   end
@@ -247,9 +240,9 @@ end;
 
 function TNamespace.GetAsString(const AName: string; const ADefault: string): string;
 begin
-  var Value: TArray<string>;
+  var Value: string;
   if FValues.TryGetValue(AName, Value) and (Length(Value) > 0) then
-    Result := Value[0]
+    Result := Value
   else
     Result := ADefault;
 end;
@@ -319,7 +312,7 @@ begin
   try
     for var Arg in FArgs do
       if Arg.DefaultValue <> '' then
-        Result.SetValue(Arg.Name, [Arg.DefaultValue]);
+        Result.SetValue(Arg.Name, Arg.DefaultValue);
 
     var i: integer := 0;
     while i < Length(ARawArgs) do
@@ -333,7 +326,7 @@ begin
 
         if Arg.Action = TArgAction.Flag then
         begin
-          Result.SetValue(Arg.Name, []); // presence -> true
+          Result.SetValue(Arg.Name, ''); // presence -> true
           Inc(i);
           Continue;
         end;
@@ -373,7 +366,7 @@ begin
             end;
         end;
 
-        Result.SetValue(Arg.Name, [ArgValue]);
+        Result.SetValue(Arg.Name, ArgValue);
         Inc(i, 2);
         Continue;
       end
@@ -385,7 +378,7 @@ begin
           if (Arg.ShortName = '') and (Arg.LongName = '') then
             if not Result.Has(Arg.Name) then
             begin
-              Result.SetValue(Arg.Name, [Token]);
+              Result.SetValue(Arg.Name, Token);
               Found := True;
               Break;
             end;
@@ -403,7 +396,7 @@ begin
     // For flags with action store_true that were not set, put false
     for var Arg in FArgs do
       if (Arg.Action = TArgAction.Flag) and not Result.Has(Arg.Name) then
-        Result.SetValue(Arg.Name, ['0']);
+        Result.SetValue(Arg.Name, '0');
   except
     Result.Free;
     raise;
