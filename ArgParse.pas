@@ -301,7 +301,7 @@ begin
               Break;
             end;
           if not Found then
-            RaiseError(Format('Value for %s not in choices', [Token]));
+            RaiseError(Format('Value for %s not in choices: %s', [Token, string.Join('|', Arg.Choices)]));
         end;
 
         // validate type
